@@ -28,13 +28,16 @@ public:
     virtual void RenderVideoFrame(NativeImage *pImage);
     virtual void UnInit();
 
+    //对应 Java 层 GLSurfaceView.Renderer 的三个接口
     virtual void OnSurfaceCreated();
     virtual void OnSurfaceChanged(int w, int h);
     virtual void OnDrawFrame();
 
+    //静态实例管理
     static VideoGLRender *GetInstance();
     static void ReleaseInstance();
 
+    //设置变换矩阵，控制图像的旋转缩放
     virtual void UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY);
     virtual void UpdateMVPMatrix(TransformMatrix * pTransformMatrix);
     virtual void SetTouchLoc(float touchX, float touchY) {

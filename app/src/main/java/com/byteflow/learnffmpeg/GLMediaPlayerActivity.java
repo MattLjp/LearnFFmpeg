@@ -1,12 +1,21 @@
 /**
- *
  * Created by 公众号：字节流动 on 2021/3/16.
  * https://github.com/githubhaohao/LearnFFmpeg
  * 最新文章首发于公众号：字节流动，有疑问或者技术交流可以添加微信 Byte-Flow ,领取视频教程, 拉你进技术交流群
- *
- * */
+ */
 
 package com.byteflow.learnffmpeg;
+
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_DURATION;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_HEIGHT;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_WIDTH;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_DONE;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_INIT_ERROR;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_READY;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODING_TIME;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_REQUEST_RENDER;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_GL_RENDER;
+import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_RENDER_OPENGL;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -24,25 +33,9 @@ import androidx.core.app.ActivityCompat;
 
 import com.byteflow.learnffmpeg.media.FFMediaPlayer;
 import com.byteflow.learnffmpeg.media.MyGLSurfaceView;
-import com.byteflow.learnffmpeg.util.CommonUtils;
+import com.byteflow.learnffmpeg.opengl.SimpleRender;
 
-import java.util.logging.LogManager;
-
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
-
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_DURATION;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_HEIGHT;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MEDIA_PARAM_VIDEO_WIDTH;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_DONE;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_INIT_ERROR;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODER_READY;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_DECODING_TIME;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.MSG_REQUEST_RENDER;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_GL_RENDER;
-import static com.byteflow.learnffmpeg.media.FFMediaPlayer.VIDEO_RENDER_OPENGL;
-
-public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfaceView.Renderer, FFMediaPlayer.EventCallback, MyGLSurfaceView.OnGestureCallback{
+public class GLMediaPlayerActivity extends AppCompatActivity implements FFMediaPlayer.EventCallback, MyGLSurfaceView.OnGestureCallback {
     private static final String TAG = "MediaPlayerActivity";
     private static final String[] REQUEST_PERMISSIONS = {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -53,13 +46,14 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
     private SeekBar mSeekBar = null;
     private boolean mIsTouch = false;
     private String mVideoPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/byteflow/one_piece.mp4";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gl_media_player);
         mGLSurfaceView = findViewById(R.id.surface_view);
         mGLSurfaceView.setEGLContextClientVersion(3);
-        mGLSurfaceView.setRenderer(this);
+        mGLSurfaceView.setRenderer(new SimpleRender());
         mGLSurfaceView.addOnGestureCallback(this);
         mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
 
@@ -78,7 +72,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 Log.d(TAG, "onStopTrackingTouch() called with: progress = [" + seekBar.getProgress() + "]");
-                if(mMediaPlayer != null) {
+                if (mMediaPlayer != null) {
                     mMediaPlayer.seekToPosition(mSeekBar.getProgress());
                     mIsTouch = false;
                 }
@@ -97,7 +91,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
         if (!hasPermissionsGranted(REQUEST_PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, REQUEST_PERMISSIONS, PERMISSION_REQUEST_CODE);
         } else {
-            if(mMediaPlayer != null)
+            if (mMediaPlayer != null)
                 mMediaPlayer.play();
         }
 
@@ -110,7 +104,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
                 Toast.makeText(this, "We need the permission: WRITE_EXTERNAL_STORAGE", Toast.LENGTH_SHORT).show();
             } else {
                 //if(mMediaPlayer != null)
-                    //mMediaPlayer.play();
+                //mMediaPlayer.play();
             }
         } else {
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -120,31 +114,15 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
     @Override
     protected void onPause() {
         super.onPause();
-        if(mMediaPlayer != null)
+        if (mMediaPlayer != null)
             mMediaPlayer.pause();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(mMediaPlayer != null)
+        if (mMediaPlayer != null)
             mMediaPlayer.unInit();
-    }
-
-    @Override
-    public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        FFMediaPlayer.native_OnSurfaceCreated(VIDEO_GL_RENDER);
-    }
-
-    @Override
-    public void onSurfaceChanged(GL10 gl10, int w, int h) {
-        Log.d(TAG, "onSurfaceChanged() called with: gl10 = [" + gl10 + "], w = [" + w + "], h = [" + h + "]");
-        FFMediaPlayer.native_OnSurfaceChanged(VIDEO_GL_RENDER, w, h);
-    }
-
-    @Override
-    public void onDrawFrame(GL10 gl10) {
-        FFMediaPlayer.native_OnDrawFrame(VIDEO_GL_RENDER);
     }
 
     @Override
@@ -165,7 +143,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
                         mGLSurfaceView.requestRender();
                         break;
                     case MSG_DECODING_TIME:
-                        if(!mIsTouch)
+                        if (!mIsTouch)
                             mSeekBar.setProgress((int) msgValue);
                         break;
                     default:
@@ -179,7 +157,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
     private void onDecoderReady() {
         int videoWidth = (int) mMediaPlayer.getMediaParams(MEDIA_PARAM_VIDEO_WIDTH);
         int videoHeight = (int) mMediaPlayer.getMediaParams(MEDIA_PARAM_VIDEO_HEIGHT);
-        if(videoHeight * videoWidth != 0)
+        if (videoHeight * videoWidth != 0)
             mGLSurfaceView.setAspectRatio(videoWidth, videoHeight);
 
         int duration = (int) mMediaPlayer.getMediaParams(MEDIA_PARAM_VIDEO_DURATION);
@@ -201,7 +179,7 @@ public class GLMediaPlayerActivity extends AppCompatActivity implements GLSurfac
 
     @Override
     public void onGesture(int xRotateAngle, int yRotateAngle, float scale) {
-         FFMediaPlayer.native_SetGesture(VIDEO_GL_RENDER, xRotateAngle, yRotateAngle, scale);
+        FFMediaPlayer.native_SetGesture(VIDEO_GL_RENDER, xRotateAngle, yRotateAngle, scale);
     }
 
     @Override

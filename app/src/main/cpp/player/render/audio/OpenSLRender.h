@@ -35,12 +35,19 @@ private:
     static void CreateSLWaitingThread(OpenSLRender *openSlRender);
     static void AudioPlayerCallback(SLAndroidSimpleBufferQueueItf bufferQueue, void *context);
 
+    //Audio 引擎对象
     SLObjectItf m_EngineObj = nullptr;
+    //Audio 引擎对象接口
     SLEngineItf m_EngineEngine = nullptr;
+    //混音器
     SLObjectItf m_OutputMixObj = nullptr;
+    //Audio player对象
     SLObjectItf m_AudioPlayerObj = nullptr;
+    //Audio player对象接口
     SLPlayItf m_AudioPlayerPlay = nullptr;
+    //音量接口
     SLVolumeItf m_AudioPlayerVolume = nullptr;
+    //缓冲器队列接口
     SLAndroidSimpleBufferQueueItf m_BufferQueue;
 
     std::queue<AudioFrame *> m_AudioFrameQueue;

@@ -226,7 +226,7 @@ void DecoderBase::UpdateTimeStamp() {
 
 long DecoderBase::AVSync() {
     LOGCATE("DecoderBase::AVSync");
-    long curSysTime = GetSysCurre  ntTime();
+    long curSysTime = GetSysCurrentTime();
     //基于系统时钟计算从开始播放流逝的时间
     long elapsedTime = curSysTime - m_StartTimeStamp;
 

@@ -11,7 +11,7 @@
 #include <GLUtils.h>
 #include <gtc/matrix_transform.hpp>
 
-VideoGLRender* VideoGLRender::s_Instance = nullptr;
+VideoGLRender *VideoGLRender::s_Instance = nullptr;
 std::mutex VideoGLRender::m_Mutex;
 
 static char vShaderStr[] =
@@ -180,33 +180,35 @@ static char fGrayShaderStr[] =
         "}";
 
 GLfloat verticesCoords[] = {
-        -1.0f,  1.0f, 0.0f,  // Position 0
+        -1.0f, 1.0f, 0.0f,  // Position 0
         -1.0f, -1.0f, 0.0f,  // Position 1
-        1.0f,  -1.0f, 0.0f,  // Position 2
-        1.0f,   1.0f, 0.0f,  // Position 3
+        1.0f, -1.0f, 0.0f,  // Position 2
+        1.0f, 1.0f, 0.0f,  // Position 3
 };
 
 GLfloat textureCoords[] = {
-        0.0f,  0.0f,        // TexCoord 0
-        0.0f,  1.0f,        // TexCoord 1
-        1.0f,  1.0f,        // TexCoord 2
-        1.0f,  0.0f         // TexCoord 3
+        0.0f, 0.0f,        // TexCoord 0
+        0.0f, 1.0f,        // TexCoord 1
+        1.0f, 1.0f,        // TexCoord 2
+        1.0f, 0.0f         // TexCoord 3
 };
 
-GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
+GLushort indices[] = {0, 1, 2, 0, 2, 3};
 
-VideoGLRender::VideoGLRender():VideoRender(VIDEO_RENDER_OPENGL) {
+VideoGLRender::VideoGLRender() : VideoRender(VIDEO_RENDER_OPENGL) {
 
 }
 
 VideoGLRender::~VideoGLRender() {
+    // 释放缓存图像
     NativeImageUtil::FreeNativeImage(&m_RenderImage);
 
 }
 
+//初始化视频图像的宽和高
 void VideoGLRender::Init(int videoWidth, int videoHeight, int *dstSize) {
     LOGCATE("VideoGLRender::InitRender video[w, h]=[%d, %d]", videoWidth, videoHeight);
-    if(dstSize != nullptr) {
+    if (dstSize != nullptr) {
         dstSize[0] = videoWidth;
         dstSize[1] = videoHeight;
     }
@@ -214,9 +216,10 @@ void VideoGLRender::Init(int videoWidth, int videoHeight, int *dstSize) {
     UpdateMVPMatrix(0, 0, 1.0f, 1.0f);
 }
 
+// 接收解码后的视频帧
 void VideoGLRender::RenderVideoFrame(NativeImage *pImage) {
     LOGCATE("VideoGLRender::RenderVideoFrame pImage=%p", pImage);
-    if(pImage == nullptr || pImage->ppPlane[0] == nullptr)
+    if (pImage == nullptr || pImage->ppPlane[0] == nullptr)
         return;
     std::unique_lock<std::mutex> lock(m_Mutex);
     if (pImage->width != m_RenderImage.width || pImage->height != m_RenderImage.height) {
@@ -238,8 +241,8 @@ void VideoGLRender::UnInit() {
 
 }
 
-void VideoGLRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY)
-{
+// 设置变换矩阵，控制图像的旋转缩放
+void VideoGLRender::UpdateMVPMatrix(int angleX, int angleY, float scaleX, float scaleY) {
     angleX = angleX % 360;
     angleY = angleY % 360;
 
@@ -312,9 +315,11 @@ void VideoGLRender::UpdateMVPMatrix(TransformMatrix *pTransformMatrix) {
                                         fFactorY * pTransformMatrix->scaleY, 1.0f));
     Model = glm::rotate(Model, fRotate, glm::vec3(0.0f, 0.0f, 1.0f));
     Model = glm::translate(Model,
-                           glm::vec3(pTransformMatrix->translateX, pTransformMatrix->translateY, 0.0f));
+                           glm::vec3(pTransformMatrix->translateX, pTransformMatrix->translateY,
+                                     0.0f));
 
-    LOGCATE("VideoGLRender::UpdateMVPMatrix rotate %d,%.2f,%0.5f,%0.5f,%0.5f,%0.5f,", pTransformMatrix->degree, fRotate,
+    LOGCATE("VideoGLRender::UpdateMVPMatrix rotate %d,%.2f,%0.5f,%0.5f,%0.5f,%0.5f,",
+            pTransformMatrix->degree, fRotate,
             pTransformMatrix->translateX, pTransformMatrix->translateY,
             fFactorX * pTransformMatrix->scaleX, fFactorY * pTransformMatrix->scaleY);
 
@@ -325,16 +330,18 @@ void VideoGLRender::OnSurfaceCreated() {
     LOGCATE("VideoGLRender::OnSurfaceCreated");
 
     m_ProgramObj = GLUtils::CreateProgram(vShaderStr, fShaderStr);
-    if (!m_ProgramObj)
-    {
+    if (!m_ProgramObj) {
         LOGCATE("VideoGLRender::OnSurfaceCreated create program fail");
         return;
     }
 
     glGenTextures(TEXTURE_NUM, m_TextureIds);
-    for (int i = 0; i < TEXTURE_NUM ; ++i) {
+    for (int i = 0; i < TEXTURE_NUM; ++i) {
+        //激活指定纹理单元
         glActiveTexture(GL_TEXTURE0 + i);
+        //绑定纹理ID到纹理单元
         glBindTexture(GL_TEXTURE_2D, m_TextureIds[i]);
+        //配置边缘过渡参数
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -359,12 +366,12 @@ void VideoGLRender::OnSurfaceCreated() {
 
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[0]);
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (const void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
     glBindBuffer(GL_ARRAY_BUFFER, m_VboIds[1]);
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (const void *)0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (const void *) 0);
     glBindBuffer(GL_ARRAY_BUFFER, GL_NONE);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_VboIds[2]);
@@ -384,8 +391,9 @@ void VideoGLRender::OnSurfaceChanged(int w, int h) {
 
 void VideoGLRender::OnDrawFrame() {
     glClear(GL_COLOR_BUFFER_BIT);
-    if(m_ProgramObj == GL_NONE|| m_RenderImage.ppPlane[0] == nullptr) return;
-    LOGCATE("VideoGLRender::OnDrawFrame [w, h]=[%d, %d], format=%d", m_RenderImage.width, m_RenderImage.height, m_RenderImage.format);
+    if (m_ProgramObj == GL_NONE || m_RenderImage.ppPlane[0] == nullptr) return;
+    LOGCATE("VideoGLRender::OnDrawFrame [w, h]=[%d, %d], format=%d", m_RenderImage.width,
+            m_RenderImage.height, m_RenderImage.format);
     m_FrameIndex++;
 
 //    if(m_FrameIndex == 2)
@@ -393,12 +401,18 @@ void VideoGLRender::OnDrawFrame() {
 
     // upload image data
     std::unique_lock<std::mutex> lock(m_Mutex);
-    switch (m_RenderImage.format)
-    {
+    switch (m_RenderImage.format) {
         case IMAGE_FORMAT_RGBA:
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, m_TextureIds[0]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_RenderImage.width, m_RenderImage.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, m_RenderImage.ppPlane[0]);
+            glTexImage2D(GL_TEXTURE_2D, 0,// level一般为0
+                         GL_RGBA, //纹理内部格式
+                         m_RenderImage.width, m_RenderImage.height, // 画面宽高
+                         0, // 必须为0
+                         GL_RGBA,  // 数据格式，必须和上面的纹理格式保持一直
+                         GL_UNSIGNED_BYTE, // RGBA每位数据的字节数，这里是BYTE​: 1 byte
+                         m_RenderImage.ppPlane[0] // 画面数据
+            );
             glBindTexture(GL_TEXTURE_2D, GL_NONE);
             break;
         case IMAGE_FORMAT_NV21:
@@ -450,13 +464,16 @@ void VideoGLRender::OnDrawFrame() {
     lock.unlock();
 
 
-    // Use the program object
-    glUseProgram (m_ProgramObj);
+    //使用OpenGL程序
+    glUseProgram(m_ProgramObj);
 
+    //绑定 VAO
     glBindVertexArray(m_VaoId);
 
+    //传入变换矩阵
     GLUtils::setMat4(m_ProgramObj, "u_MVPMatrix", m_MVPMatrix);
 
+    //绑定纹理
     for (int i = 0; i < TEXTURE_NUM; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, m_TextureIds[i]);
@@ -468,21 +485,21 @@ void VideoGLRender::OnDrawFrame() {
     //float time = static_cast<float>(fmod(m_FrameIndex, 60) / 50);
     //GLUtils::setFloat(m_ProgramObj, "u_Time", time);
 
+    //设置偏移量
     float offset = (sin(m_FrameIndex * MATH_PI / 40) + 1.0f) / 2.0f;
     GLUtils::setFloat(m_ProgramObj, "u_Offset", offset);
+    //设置图像尺寸
     GLUtils::setVec2(m_ProgramObj, "u_TexSize", vec2(m_RenderImage.width, m_RenderImage.height));
     GLUtils::setInt(m_ProgramObj, "u_nImgType", m_RenderImage.format);
 
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *)0);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, (const void *) 0);
 
 }
 
 VideoGLRender *VideoGLRender::GetInstance() {
-    if(s_Instance == nullptr)
-    {
+    if (s_Instance == nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance == nullptr)
-        {
+        if (s_Instance == nullptr) {
             s_Instance = new VideoGLRender();
         }
 
@@ -491,11 +508,9 @@ VideoGLRender *VideoGLRender::GetInstance() {
 }
 
 void VideoGLRender::ReleaseInstance() {
-    if(s_Instance != nullptr)
-    {
+    if (s_Instance != nullptr) {
         std::lock_guard<std::mutex> lock(m_Mutex);
-        if(s_Instance != nullptr)
-        {
+        if (s_Instance != nullptr) {
             delete s_Instance;
             s_Instance = nullptr;
         }
